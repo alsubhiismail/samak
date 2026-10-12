@@ -1,5 +1,5 @@
 // Offline support: the app shell is versioned; images, model and runtime live in a long-lived asset cache.
-const VER = "202610120858";
+const VER = "202610120859";
 const SHELL = "samak-shell-" + VER;
 const ASSETS = "samak-assets-v1";
 const SHELL_FILES = ["./", "index.html", "app.css", "app.js", "ml-worker.js", "manifest.webmanifest", "data/species.json", "data/meta.json", "data/refs.bin", "fonts/plex-ar-400.woff2", "fonts/plex-lat-400.woff2", "fonts/plex-ar-600.woff2", "fonts/plex-lat-600.woff2", "fonts/reem-kufi-700.woff2", "fonts/plex-serif-400i.woff2", "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png", "data/assets.json"];

@@ -1,5 +1,5 @@
 // صيدتي — offline fish identification for the Arabian Sea coast of Oman
-const VER = "202610120858";
+const VER = "202610120859";
 const ASSET_CACHE = "samak-assets-v1";
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
@@ -309,12 +309,19 @@ function bindPack() {
   };
 }
 
+const IOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+const STANDALONE = (navigator.standalone === true) || matchMedia("(display-mode: standalone)").matches;
+function installCard() {
+  if (!IOS || STANDALONE) return "";
+  return `<div class="pack"><strong>ثبّته أولاً على الشاشة الرئيسية</strong>اضغط زر المشاركة <svg viewBox="0 0 24 24" width="18" height="18" style="vertical-align:-3px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M12 3v12M8 7l4-4 4 4M5 11v9h14v-9"/></svg> في Safari، ثم «إضافة إلى الشاشة الرئيسية». بعدها افتح «صيدتي» من الشاشة الرئيسية ونزّل البيانات من هناك.</div>`;
+}
 function viewHome() {
   view.innerHTML = `
+    ${installCard()}
     <p class="lead">صوّر السمكة التي اصطدتها، ويطابقها التطبيق مع ${nf(S.species.length)} نوعاً من أطلس أسماك بحر العرب في عُمان.</p>
     <button class="shoot" id="shoot">${CAM_SVG}<span>صوّر السمكة</span></button>
     <button class="alt" id="pick">اختر صورة من الألبوم</button>
-    ${packBlock()}
+    ${IOS && !STANDALONE ? "" : packBlock()}
     <h2 class="mark">لنتيجة أدق</h2>
     <ul class="tips">
       <li>صوّر السمكة كاملة من جانبها، من الرأس إلى الذيل.</li>
