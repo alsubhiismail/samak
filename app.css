@@ -1,0 +1,183 @@
+/* صيدتي — field guide to the fishes of Oman's Arabian Sea coast */
+@font-face{font-family:"Plex Arabic";font-weight:400;font-display:swap;src:url(fonts/plex-ar-400.woff2) format("woff2");unicode-range:U+0600-06FF,U+0750-077F,U+0870-088E,U+0890-0891,U+0898-08E1,U+08E3-08FF,U+200C-200E,U+2010-2011,U+204F,U+2E41,U+FB50-FDFF,U+FE70-FE74,U+FE76-FEFC}
+@font-face{font-family:"Plex Arabic";font-weight:400;font-display:swap;src:url(fonts/plex-lat-400.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+2000-206F,U+2074,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:"Plex Arabic";font-weight:600;font-display:swap;src:url(fonts/plex-ar-600.woff2) format("woff2");unicode-range:U+0600-06FF,U+0750-077F,U+0870-088E,U+0890-0891,U+0898-08E1,U+08E3-08FF,U+200C-200E,U+2010-2011,U+204F,U+2E41,U+FB50-FDFF,U+FE70-FE74,U+FE76-FEFC}
+@font-face{font-family:"Plex Arabic";font-weight:600;font-display:swap;src:url(fonts/plex-lat-600.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+2000-206F,U+2074,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:"Reem Kufi";font-weight:700;font-display:swap;src:url(fonts/reem-kufi-700.woff2) format("woff2")}
+@font-face{font-family:"Plex Serif";font-style:italic;font-weight:400;font-display:swap;src:url(fonts/plex-serif-400i.woff2) format("woff2")}
+
+:root{
+  --ink:#0d2b3e; --ink-2:#38505f; --muted:#667b88;
+  --sea:#117ac0; --sea-soft:#e2eff8;
+  --buoy:#ec5a0c; --buoy-press:#c94a07; --on-buoy:#fff;
+  --foam:#f2f5f6; --paper:#fff; --line:#d5dfe4;
+  --kelp:#1b8455; --amber:#b57a00; --low:#8a96a0;
+  --tape:#f2c41f; --tape-ink:#2b2200;
+  --radius:12px;
+  --top-h:52px; --tabs-h:62px;
+  --safe-t:env(safe-area-inset-top,0px); --safe-b:env(safe-area-inset-bottom,0px);
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --ink:#e4edf1; --ink-2:#b8c8d1; --muted:#8ba0ac;
+    --sea:#62b4ea; --sea-soft:#10324a;
+    --buoy:#ff6b1f; --buoy-press:#e45a10;
+    --foam:#071319; --paper:#0d1f29; --line:#1e394a;
+    --kelp:#3fc488; --amber:#e2ae37; --low:#7d8f9a;
+    --tape:#d9ad12;
+    color-scheme:dark;
+  }
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;background:var(--foam)}
+body{margin:0;background:var(--foam);color:var(--ink);font:400 17px/1.6 "Plex Arabic",-apple-system,"SF Arabic","Geeza Pro",system-ui,sans-serif;-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none}
+img{max-width:100%;display:block}
+a{color:var(--sea);text-decoration:none}
+button{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--sea);outline-offset:2px;border-radius:6px}
+[hidden]{display:none!important}
+
+/* chrome */
+.top{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:8px;height:calc(var(--top-h) + var(--safe-t));padding:var(--safe-t) 16px 0;background:var(--ink);color:#fff}
+@media (prefers-color-scheme:dark){.top{background:#0a1c26}}
+.brand{font:700 24px/1 "Reem Kufi","Plex Arabic",sans-serif;color:#fff;letter-spacing:0}
+.back{display:grid;place-items:center;width:40px;height:40px;margin-inline-start:-8px;border:0;background:none;color:#fff;border-radius:50%}
+.back svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.net{margin-inline-start:auto;font-size:13px;color:#cfe3ee;display:flex;align-items:center;gap:6px}
+.net::before{content:"";width:8px;height:8px;border-radius:50%;background:#7fd0a6}
+.net.off::before{background:#ffb46b}
+main{max-width:620px;margin:0 auto;padding:16px 16px calc(var(--tabs-h) + var(--safe-b) + 28px);outline:none}
+.tabs{position:fixed;inset-inline:0;bottom:0;z-index:20;display:flex;justify-content:space-around;height:calc(var(--tabs-h) + var(--safe-b));padding-bottom:var(--safe-b);background:var(--paper);border-top:1px solid var(--line)}
+.tabs a{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:var(--muted);font-size:13px;font-weight:600}
+.tabs a svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linejoin:round;stroke-linecap:round}
+.tabs a.on{color:var(--sea)}
+.toast{position:fixed;inset-inline:16px;bottom:calc(var(--tabs-h) + var(--safe-b) + 12px);z-index:30;max-width:560px;margin:0 auto;padding:12px 16px;border-radius:10px;background:var(--ink);color:var(--foam);font-size:15px;opacity:0;transform:translateY(8px);transition:opacity .2s,transform .2s;pointer-events:none}
+.toast.show{opacity:1;transform:none}
+@media (prefers-color-scheme:dark){.toast{background:#e4edf1;color:#071319}}
+
+/* headings carry the atlas's double-bar mark */
+h1,h2,h3{margin:0;font-weight:600;line-height:1.35}
+h2.mark{display:flex;align-items:center;gap:10px;font-size:19px;margin:28px 0 12px}
+h2.mark::before{content:"";width:9px;height:20px;flex:none;background:linear-gradient(90deg,var(--sea) 0 3px,transparent 3px 6px,var(--sea) 6px 9px)}
+.sub{color:var(--muted);font-size:15px}
+p{margin:0 0 10px}
+
+/* home */
+.lead{margin:6px 0 18px;color:var(--ink-2);font-size:16px}
+.shoot{display:flex;align-items:center;justify-content:center;gap:14px;width:100%;min-height:96px;padding:18px;border:0;border-radius:18px;background:var(--buoy);color:var(--on-buoy);font:700 26px/1.2 "Reem Kufi","Plex Arabic",sans-serif;cursor:pointer;box-shadow:0 3px 0 var(--buoy-press)}
+.shoot:active{transform:translateY(2px);box-shadow:0 1px 0 var(--buoy-press)}
+.shoot svg{width:40px;height:40px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linejoin:round}
+.alt{display:block;width:100%;margin-top:10px;padding:14px;border:1.5px solid var(--line);border-radius:14px;background:var(--paper);font-weight:600;font-size:17px;cursor:pointer}
+.alt:active{background:var(--sea-soft)}
+.search{position:relative;margin-top:22px}
+.search input{width:100%;height:52px;padding:0 46px 0 14px;border:1.5px solid var(--line);border-radius:14px;background:var(--paper);color:var(--ink);font:inherit;font-size:17px}
+.search input::placeholder{color:var(--muted)}
+.search svg{position:absolute;inset-inline-start:14px;top:14px;width:24px;height:24px;fill:none;stroke:var(--muted);stroke-width:2;stroke-linecap:round}
+.pack{margin:18px 0 0;padding:14px 16px;border-radius:14px;background:var(--sea-soft);font-size:15px}
+.pack strong{display:block;font-size:16px;margin-bottom:2px}
+.pack .row{display:flex;gap:10px;align-items:center;margin-top:10px}
+.pack button{flex:none;padding:9px 16px;border:0;border-radius:10px;background:var(--sea);color:#fff;font-weight:600;cursor:pointer}
+.pack.done{background:none;padding:6px 2px;color:var(--kelp);font-weight:600}
+.bar{flex:1;height:8px;border-radius:4px;background:color-mix(in srgb,var(--sea) 18%,transparent);overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--sea);transition:width .3s}
+.tips{margin:0;padding:0;list-style:none;color:var(--ink-2);font-size:15px}
+.tips li{position:relative;padding:6px 22px 6px 0;border-bottom:1px solid var(--line)}
+.tips li:last-child{border-bottom:0}
+.tips li::before{content:"";position:absolute;right:4px;top:15px;width:8px;height:8px;border-radius:2px;background:var(--buoy);transform:rotate(45deg)}
+
+/* group tiles */
+.groups{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.gt{display:flex;flex-direction:column;border-radius:var(--radius);overflow:hidden;background:var(--paper);border:1px solid var(--line);color:var(--ink)}
+.gt .ph{aspect-ratio:16/9;background:#dfe7eb center/cover no-repeat}
+.gt b{display:block;padding:8px 10px 0;font-weight:600;font-size:16px;line-height:1.35}
+.gt small{display:block;padding:0 10px 9px;color:var(--muted);font-size:13px}
+
+/* species list */
+.list{margin:0;padding:0;list-style:none;background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+.list li+li{border-top:1px solid var(--line)}
+.sp{display:flex;align-items:center;gap:12px;padding:10px 12px;color:var(--ink)}
+.sp .th{flex:none;width:96px;height:60px;border-radius:8px;background:#e3eaee center/cover no-repeat}
+.sp .th.none{display:grid;place-items:center;color:var(--muted);font-size:12px}
+.sp .tx{min-width:0;flex:1}
+.sp .nm{display:block;font-weight:600;font-size:16px;line-height:1.35}
+.sp .al{display:block;color:var(--ink-2);font-size:14px;line-height:1.4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sci{font-family:"Plex Serif",Georgia,serif;font-style:italic;direction:ltr;unicode-bidi:isolate}
+.sp .sci{font-size:14px;color:var(--muted)}
+.count{color:var(--muted);font-size:14px;margin:-4px 0 12px}
+.empty{padding:28px 8px;text-align:center;color:var(--muted)}
+
+/* result */
+.analyzing{display:grid;gap:14px;justify-items:center;padding:20px 0;text-align:center}
+.analyzing img{max-height:46vh;border-radius:var(--radius)}
+.steps{margin:0;padding:0;list-style:none;color:var(--muted);font-size:15px}
+.steps li.on{color:var(--ink);font-weight:600}
+.steps li.ok{color:var(--kelp)}
+.spin{width:28px;height:28px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--sea);animation:sp 0.9s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spin{animation-duration:3s}}
+.plate{display:grid;grid-template-columns:1fr 1fr;gap:2px;border-radius:var(--radius);overflow:hidden;background:var(--line)}
+.plate figure{margin:0;position:relative;background:#0b1820;display:grid;place-items:center;aspect-ratio:4/3}
+.plate img{width:100%;height:100%;object-fit:contain}
+.plate figcaption{position:absolute;bottom:0;inset-inline:0;padding:4px 8px;font-size:12px;color:#fff;background:linear-gradient(transparent,rgba(0,0,0,.65))}
+.verdict{margin:14px 0 4px}
+.lvl{display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:600;padding:2px 10px 2px 12px;border-radius:999px}
+.lvl::before{content:"";width:8px;height:8px;border-radius:50%;background:currentColor}
+.lvl.hi{color:var(--kelp);background:color-mix(in srgb,var(--kelp) 13%,transparent)}
+.lvl.mid{color:var(--amber);background:color-mix(in srgb,var(--amber) 14%,transparent)}
+.lvl.lo{color:var(--low);background:color-mix(in srgb,var(--low) 16%,transparent)}
+.hero-name{font:700 30px/1.25 "Reem Kufi","Plex Arabic",sans-serif;margin:8px 0 2px}
+.hero-alt{color:var(--ink-2);font-size:16px}
+.hero-sci{color:var(--muted);font-size:16px;margin-top:2px}
+.actions{display:flex;gap:10px;margin-top:14px}
+.btn{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:50px;padding:10px 14px;border-radius:12px;border:1.5px solid var(--line);background:var(--paper);color:var(--ink);font-weight:600;font-size:16px;cursor:pointer;text-align:center}
+.btn.pri{background:var(--sea);border-color:var(--sea);color:#fff}
+.btn.ok{background:var(--kelp);border-color:var(--kelp);color:#fff}
+.btn:active{filter:brightness(.94)}
+.note{margin-top:14px;padding:12px 14px;border-radius:12px;background:var(--sea-soft);color:var(--ink-2);font-size:15px}
+.cands .sp .meter{flex:none;width:54px;text-align:center;font-size:13px;color:var(--muted)}
+.meter i{display:block;height:6px;margin-top:4px;border-radius:3px;background:var(--line);overflow:hidden}
+.meter i b{display:block;height:100%;background:var(--sea)}
+.cropwrap{position:relative;touch-action:none;user-select:none;-webkit-user-select:none;margin-top:8px}
+.cropwrap img{width:100%;border-radius:8px}
+.cropbox{position:absolute;border:2px solid #fff;box-shadow:0 0 0 9999px rgba(0,0,0,.45);border-radius:4px}
+.cropbox i{position:absolute;width:28px;height:28px;border-radius:50%;background:var(--buoy);border:3px solid #fff}
+.cropbox i[data-h=nw]{left:-15px;top:-15px}.cropbox i[data-h=ne]{right:-15px;top:-15px}
+.cropbox i[data-h=sw]{left:-15px;bottom:-15px}.cropbox i[data-h=se]{right:-15px;bottom:-15px}
+
+/* species page */
+.sp-hero{margin:-16px -16px 0;background:#0b1820}
+.sp-hero img{width:100%;max-height:52vh;object-fit:contain}
+.sp-hero .noimg{padding:60px 16px;text-align:center;color:#9fb3be}
+.names{padding:16px 0 4px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.chip{padding:3px 12px;border-radius:999px;background:var(--sea-soft);color:var(--ink);font-size:15px}
+.facts{margin:0;display:grid;grid-template-columns:auto 1fr;gap:0;background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+.facts dt,.facts dd{margin:0;padding:11px 12px;border-top:1px solid var(--line)}
+.facts dt{color:var(--muted);font-size:15px;white-space:nowrap}
+.facts dd{font-size:16px}
+.facts dt:first-of-type,.facts dt:first-of-type+dd{border-top:0}
+.en{direction:ltr;unicode-bidi:isolate}
+.dist{font-size:15px;color:var(--ink-2);direction:ltr;text-align:left;unicode-bidi:isolate;line-height:1.55}
+details.more{margin-top:10px;background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);padding:2px 12px}
+details.more summary{padding:10px 0;font-weight:600;cursor:pointer}
+.src{font-size:14px;color:var(--muted);margin-top:16px}
+
+/* the measuring tape */
+.tape{margin:6px 0 2px}
+.tape .rule{position:relative;height:46px;border-radius:5px;background:
+  repeating-linear-gradient(to left,var(--tape-ink) 0 1.5px,transparent 1.5px 100%) 0 0/var(--minor) 9px repeat-x,
+  repeating-linear-gradient(to left,var(--tape-ink) 0 2px,transparent 2px 100%) 0 0/var(--major) 18px repeat-x,
+  var(--tape);box-shadow:inset 0 -3px 0 rgba(0,0,0,.12)}
+.tape .rule span{position:absolute;top:19px;font-size:11px;font-weight:600;color:var(--tape-ink);transform:translateX(50%);direction:ltr}
+.tape .mk{position:absolute;bottom:-1px;width:3px;border-radius:2px;transform:translateX(50%)}
+.tape .mk.max{height:46px;background:var(--buoy)}
+.tape .mk.com{height:34px;background:var(--sea)}
+.tape .legend{display:flex;flex-wrap:wrap;gap:4px 16px;margin-top:8px;font-size:15px}
+.tape .legend b{display:inline-block;width:10px;height:10px;border-radius:2px;margin-inline-end:6px;vertical-align:0}
+
+/* log */
+.log .sp .th{width:72px;height:72px}
+.when{font-size:13px;color:var(--muted)}
+.linkish{border:0;background:none;color:var(--sea);font-weight:600;padding:8px 0;cursor:pointer}
+.danger{color:#c0392b}

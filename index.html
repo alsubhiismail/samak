@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>صيدتي</title>
+<meta name="description" content="تعرّف على السمكة من صورتها، بدون إنترنت. مرجعه الأطلس الميداني لأسماك بحر العرب في سلطنة عُمان.">
+<meta name="theme-color" content="#0d2b3e">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="صيدتي">
+<link rel="stylesheet" href="app.css?v=202610120858">
+</head>
+<body>
+<div id="app">
+  <header class="top">
+    <button class="back" id="backBtn" aria-label="رجوع" hidden>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" /></svg>
+    </button>
+    <a class="brand" href="#/" aria-label="الصفحة الرئيسية">صيدتي</a>
+    <span class="net" id="netState" hidden></span>
+  </header>
+  <main id="view" tabindex="-1"></main>
+  <nav class="tabs" aria-label="التنقل">
+    <a href="#/" data-tab="home"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h3l2-2h6l2 2h3v12H4z"/><circle cx="12" cy="13" r="3.5"/></svg><span>تعرّف</span></a>
+    <a href="#/browse" data-tab="browse"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12c3-5 9-6 13-3l5-3v12l-5-3c-4 3-10 2-13-3z"/><circle cx="8" cy="11" r="1"/></svg><span>الأسماك</span></a>
+    <a href="#/log" data-tab="log"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h10l3 3v15H6z"/><path d="M9 10h7M9 14h7M9 18h4"/></svg><span>سجلّي</span></a>
+  </nav>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</div>
+<input type="file" id="camInput" accept="image/*" capture="environment" hidden>
+<input type="file" id="libInput" accept="image/*" hidden>
+<script type="module" src="app.js?v=202610120858"></script>
+</body>
+</html>
