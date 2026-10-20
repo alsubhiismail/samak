@@ -1,5 +1,5 @@
 // صيدتي — offline fish identification for the Arabian Sea coast of Oman
-const VER = "202610210051";
+const VER = "202610210132";
 const ASSET_CACHE = "samak-assets-v1";
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
@@ -336,6 +336,11 @@ async function packDownload(onProgress) {
     }
     await Promise.all([lane(), lane(), lane(), lane()]);
     if (failed) throw new Error(failed + " ملفات لم تكتمل");
+    // drop files from older versions (e.g. a replaced model) so they don't take space on the phone
+    try {
+      const keep = new Set(list.files.map((f) => new URL(f.p, location.href).href));
+      for (const req of await c.keys()) if (!keep.has(req.url.split("?")[0])) await c.delete(req);
+    } catch {}
     localStorage.setItem("samak-pack", list.version);
     S.pack.done = true; onProgress(1);
   } finally { S.pack.running = false; }
@@ -353,8 +358,11 @@ function spRow(sp, extra = "") {
 
 function packBlock() {
   if (S.pack.done) return `<div class="pack done" id="pack">جاهز للعمل بدون إنترنت</div>`;
-  const mb = S.pack.list ? Math.round(S.pack.list.total / 1048576) : 130;
-  return `<div class="pack" id="pack"><strong>نزّل بيانات التطبيق مرة واحدة</strong>حتى يتعرّف على الأسماك في البحر بدون إنترنت. الحجم حوالي ${nf(mb)} ميغابايت، يُفضّل على الواي فاي.
+  const mb = S.pack.list ? Math.round(S.pack.list.total / 1048576) : 90;
+  let had = null; try { had = localStorage.getItem("samak-pack"); } catch {}
+  const head = had ? `<strong>تحديث جديد لدقة التعرّف</strong>نزّله مرة واحدة على الواي فاي حتى يعمل في البحر بدون إنترنت.`
+    : `<strong>نزّل بيانات التطبيق مرة واحدة</strong>حتى يتعرّف على الأسماك في البحر بدون إنترنت. الحجم حوالي ${nf(mb)} ميغابايت، يُفضّل على الواي فاي.`;
+  return `<div class="pack" id="pack">${head}
     <div class="row"><span class="bar"><i id="packBar" style="width:${Math.round(S.pack.pct * 100)}%"></i></span><button id="packBtn"${S.pack.running ? " disabled" : ""}>${S.pack.running ? "جارٍ التنزيل…" : "تنزيل"}</button></div></div>`;
 }
 function bindPack() {
