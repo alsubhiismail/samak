@@ -1,5 +1,5 @@
 // صيدتي — offline fish identification for the Arabian Sea coast of Oman
-const VER = "202610120859";
+const VER = "202610210050";
 const ASSET_CACHE = "samak-assets-v1";
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
@@ -162,17 +162,71 @@ function cutout(base, box, mask, msize) {
 }
 function l2(v) { let s = 0; for (let i = 0; i < v.length; i++) s += v[i] * v[i]; s = Math.sqrt(s) || 1; for (let i = 0; i < v.length; i++) v[i] /= s; return v; }
 
-async function embedCanvas(c) {
-  const m = S.meta.model;
-  const views = [c];
-  if (m.flipTTA) { const f = canvasOf(c.width, c.height); const g = f.getContext("2d"); g.translate(f.width, 0); g.scale(-1, 1); g.drawImage(c, 0, 0); views.push(f); }
-  const acc = new Float32Array(S.meta.refs.dim);
-  for (const v of views) {
-    const inp = tensorFrom(v, m.size, m.mean, m.std, m.resize);
-    const r = await ml("embed", { input: inp }, [inp.buffer]);
-    const e = l2(new Float32Array(r.emb)); for (let i = 0; i < acc.length; i++) acc[i] += e[i];
+// Principal axis of the salient object (same maths as build/fishproc.py), measured in region pixels
+function shapeInfo(mask, size, W, H) {
+  let mx = 0; for (let i = 0; i < mask.length; i++) if (mask[i] > mx) mx = mask[i];
+  const th = Math.max(0.2, mx * 0.5); const kx = W / size, ky = H / size;
+  let n = 0, sx = 0, sy = 0;
+  for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) if (mask[y * size + x] > th) { n++; sx += (x + 0.5) * kx; sy += (y + 0.5) * ky; }
+  if (n < size * size * 0.01) return null;
+  const cx = sx / n, cy = sy / n; let cxx = 0, cyy = 0, cxy = 0;
+  for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) if (mask[y * size + x] > th) {
+    const dx = (x + 0.5) * kx - cx, dy = (y + 0.5) * ky - cy; cxx += dx * dx; cyy += dy * dy; cxy += dx * dy;
   }
-  return l2(acc);
+  cxx /= n; cyy /= n; cxy /= n;
+  const theta = 0.5 * Math.atan2(2 * cxy, cxx - cyy);
+  const tr = (cxx + cyy) / 2, d = Math.sqrt(((cxx - cyy) / 2) ** 2 + cxy * cxy);
+  return { theta, elong: Math.sqrt((tr + d) / Math.max(tr - d, 1e-6)), area: n / (size * size) };
+}
+// White-background cut-out of the fish, turned so its long axis is horizontal, cropped tight
+function isolateFish(region, mask, size) {
+  const W = region.width, H = region.height;
+  const info = shapeInfo(mask, size, W, H);
+  if (!info || info.area > 0.92) return { canvas: region, info, deg: 0 };
+  const m = canvasOf(size, size); const mg = m.getContext("2d"); const md = mg.createImageData(size, size);
+  for (let i = 0; i < size * size; i++) md.data[i * 4 + 3] = Math.round(Math.min(1, Math.max(0, (mask[i] - 0.15) / 0.5)) * 255);
+  mg.putImageData(md, 0, 0);
+  const fish = canvasOf(W, H); const fg = fish.getContext("2d");
+  fg.drawImage(region, 0, 0); fg.globalCompositeOperation = "destination-in"; fg.imageSmoothingQuality = "high"; fg.drawImage(m, 0, 0, W, H);
+  const align = S.meta.align || {};
+  let rad = 0;
+  if (align.on && info.elong >= align.minElong && Math.abs(info.theta) * 180 / Math.PI >= align.minDeg) rad = info.theta;
+  const c = Math.abs(Math.cos(rad)), s = Math.abs(Math.sin(rad));
+  const RW = Math.ceil(W * c + H * s), RH = Math.ceil(W * s + H * c);
+  const rot = canvasOf(RW, RH); const rg = rot.getContext("2d", { willReadFrequently: true });
+  rg.translate(RW / 2, RH / 2); rg.rotate(-rad); rg.drawImage(fish, -W / 2, -H / 2);
+  const px = rg.getImageData(0, 0, RW, RH).data;
+  let x0 = RW, y0 = RH, x1 = -1, y1 = -1;
+  for (let y = 0; y < RH; y++) for (let x = 0; x < RW; x++) if (px[(y * RW + x) * 4 + 3] >= 128) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  if (x1 < 0) return { canvas: region, info, deg: 0 };
+  const mxp = (x1 + 1 - x0) * 0.06 + 2, myp = (y1 + 1 - y0) * 0.06 + 2;
+  const bx = Math.max(0, Math.floor(x0 - mxp)), by = Math.max(0, Math.floor(y0 - myp));
+  const bw = Math.min(RW, Math.ceil(x1 + 1 + mxp)) - bx, bh = Math.min(RH, Math.ceil(y1 + 1 + myp)) - by;
+  const out = canvasOf(bw, bh); const og = out.getContext("2d");
+  og.fillStyle = "#fff"; og.fillRect(0, 0, bw, bh); og.drawImage(rot, bx, by, bw, bh, 0, 0, bw, bh);
+  return { canvas: out, info, deg: (rad * 180) / Math.PI };
+}
+function transformed(c, mirror, turn) {
+  const o = canvasOf(c.width, c.height); const g = o.getContext("2d");
+  if (turn) { g.translate(o.width, o.height); g.rotate(Math.PI); }
+  if (mirror) { g.translate(o.width, 0); g.scale(-1, 1); }
+  g.drawImage(c, 0, 0); return o;
+}
+async function embedOne(c) {
+  const m = S.meta.model;
+  const inp = tensorFrom(c, m.size, m.mean, m.std, m.resize);
+  const r = await ml("embed", { input: inp }, [inp.buffer]);
+  return l2(new Float32Array(r.emb));
+}
+// upright view (+ mirror), and the same turned upside down: the fish may lie either way up
+async function embedViews(c) {
+  const m = S.meta.model; const out = [];
+  for (const turn of m.bothWays ? [false, true] : [false]) {
+    const a = await embedOne(transformed(c, false, turn));
+    if (m.flipTTA) { const b = await embedOne(transformed(c, true, turn)); for (let i = 0; i < a.length; i++) a[i] += b[i]; l2(a); }
+    out.push(a);
+  }
+  return out;
 }
 
 async function identify(file, manualBox, onStep) {
@@ -183,48 +237,58 @@ async function identify(file, manualBox, onStep) {
   const base = baseCanvas(im, 1024);
   // the region of interest is the whole photo, or the frame the user drew
   const region = manualBox ? cutout(base, manualBox, null, 0) : base;
-  let box = null, mask = null;
+  let box = null, fish = region;
   const seg = S.meta.seg;
   if (seg) {
     const inp = tensorFrom(region, seg.size, seg.mean, seg.std, "squash");
     const r = await ml("seg", { input: inp }, [inp.buffer]);
-    mask = new Float32Array(r.mask);
+    const mask = new Float32Array(r.mask);
     box = maskBox(mask, seg.size, region.width, region.height);
+    fish = isolateFish(region, mask, seg.size).canvas;
   }
   onStep && onStep(2);
-  const fish = cutout(region, box, mask, seg ? seg.size : 0);
-  const emb = await embedCanvas(fish);
+  const embs = await embedViews(fish);
   onStep && onStep(3);
-  const ranked = rank(emb);
+  const best = rank(embs);
+  const ranked = ordered(best, 0);
   const full = canvasOf(Math.min(base.width, 900), (Math.min(base.width, 900) * base.height) / base.width);
   full.getContext("2d").drawImage(base, 0, 0, full.width, full.height);
-  // what the user sees as "your photo": the fish area, without the white cut-out
-  const shown = cutout(region, box, null, 0);
+  // show the fish the way up it matched the atlas picture
+  const upright = best.how[ranked[0].s] === 1 ? transformed(fish, false, true) : fish;
+  const shown = canvasOf(Math.min(upright.width, 720), (Math.min(upright.width, 720) * upright.height) / upright.width);
+  shown.getContext("2d").drawImage(upright, 0, 0, shown.width, shown.height);
   const absBox = box ? { x: box.x + (manualBox ? manualBox.x : 0), y: box.y + (manualBox ? manualBox.y : 0), w: box.w, h: box.h } : manualBox;
-  return { file, base, box: absBox, emb, ranked, photo: shown.toDataURL("image/jpeg", 0.85), full: full.toDataURL("image/jpeg", 0.85) };
+  return { file, base, box: absBox, emb: embs[0], embs, best, minLen: 0, ranked, photo: shown.toDataURL("image/jpeg", 0.88), full: full.toDataURL("image/jpeg", 0.85) };
 }
 
-function rank(emb) {
+function rank(embs) {
   const { dim, n } = S.meta.refs; const N = S.species.length; const sc = S.meta.scoring;
-  const best = new Float32Array(N).fill(-2);
-  const R = S.refs;
-  for (let r = 0; r < n; r++) {
-    let d = 0; const o = r * dim; for (let k = 0; k < dim; k++) d += emb[k] * R[o + k];
-    const s = S.refSp[r]; if (d > best[s]) best[s] = d;
+  const best = new Float32Array(N).fill(-2); const how = new Uint8Array(N);   // how: which view (upright / upside down) matched
+  const R = S.refs; const hub = S.meta.refs.hub || null;   // atlas pictures that look like many species are discounted a little
+  embs.forEach((emb, v) => {
+    for (let r = 0; r < n; r++) {
+      let d = 0; const o = r * dim; for (let k = 0; k < dim; k++) d += emb[k] * R[o + k];
+      if (hub) d -= hub[r];
+      const s = S.refSp[r]; if (d > best[s]) { best[s] = d; how[s] = v; }
+    }
+    for (const L of S.learned) {
+      let d = 0; for (let k = 0; k < dim; k++) d += emb[k] * L.emb[k];
+      d += sc.learnedBonus || 0; if (d > best[L.si]) { best[L.si] = d; how[L.si] = v; }
+    }
+  });
+  best.how = how;
+  return best;
+}
+// candidates in order; minLen (cm) drops species that never grow as long as the fish in hand
+function ordered(best, minLen) {
+  const sc = S.meta.scoring; const N = best.length; const fused = new Float32Array(N);
+  if (!S.priorSet) S.priorSet = new Set((S.meta.prior && S.meta.prior.species) || []);
+  const pen = (S.meta.prior && S.meta.prior.penalty) || 0;
+  for (let s = 0; s < N; s++) {
+    const z = S.species[s].size || {};
+    const mx = z.max ? z.max * (z.maxType === "SL" ? 1.25 : 1) : 0;   // standard length leaves out the tail
+    fused[s] = best[s] < -1 || (minLen && mx && mx < minLen * 0.9) ? -9 : best[s] - (S.priorSet.has(s) ? pen : 0);
   }
-  for (const L of S.learned) {
-    let d = 0; for (let k = 0; k < dim; k++) d += emb[k] * L.emb[k];
-    d += sc.learnedBonus || 0; if (d > best[L.si]) best[L.si] = d;
-  }
-  const fused = new Float32Array(N);
-  let tz = null;
-  if (S.text && sc.wText) {
-    const t = new Float32Array(N); let mu = 0;
-    for (let s = 0; s < N; s++) { let d = 0; const o = s * dim; for (let k = 0; k < dim; k++) d += emb[k] * S.text[o + k]; t[s] = d; mu += d; }
-    mu /= N; let sd = 0; for (let s = 0; s < N; s++) sd += (t[s] - mu) ** 2; sd = Math.sqrt(sd / N) || 1;
-    tz = t.map((v) => (v - mu) / sd);
-  }
-  for (let s = 0; s < N; s++) fused[s] = best[s] < -1 ? -9 : best[s] + (tz ? sc.wText * tz[s] : 0);
   const order = [...fused.keys()].sort((a, b) => fused[b] - fused[a]).slice(0, 30);
   const top = fused[order[0]]; let z = 0; const ex = order.map((s) => { const v = Math.exp((fused[s] - top) / sc.temp); z += v; return v; });
   return order.map((s, j) => ({ s, sim: best[s], score: fused[s], p: ex[j] / z }));
@@ -451,7 +515,8 @@ function viewSpecies(id, fromResult) {
 async function saveCatch(sp, r) {
   try {
     const thumb = await (await fetch(r.photo)).blob();
-    await DB.add({ id: Date.now(), ts: Date.now(), sid: sp.id, thumb, emb: Array.from(r.emb) });
+    const e = r.embs ? r.embs[r.best.how[sp.i]] || r.embs[0] : r.emb;   // the view that matched this species
+    await DB.add({ id: Date.now(), ts: Date.now(), sid: sp.id, thumb, emb: Array.from(e) });
     await loadLearned();
     toast("حُفظت في سجلّك. سيتعرّف التطبيق على هذا النوع أسرع في المرة القادمة");
     location.hash = "#/log";
@@ -499,20 +564,23 @@ function renderResult() {
   const top = r.ranked[0]; const sp = S.species[top.s]; const lv = level(r.ranked);
   const others = r.ranked.slice(1, 8);
   view.innerHTML = `
-    <div class="plate"><figure><img src="${r.photo}" alt="صورتك"><figcaption>صورتك</figcaption></figure>
+    <div class="plate"><figure><img src="${r.photo}" alt="سمكتك"><figcaption>سمكتك</figcaption></figure>
       <figure>${sp.img ? `<img src="${imgUrl(sp)}" alt="">` : ""}<figcaption>الأقرب في الأطلس</figcaption></figure></div>
     <div class="verdict"><span class="lvl ${lv}">${LEVEL_TXT[lv]}</span></div>
     <a href="#/s/${sp.id}?r=1" style="color:inherit"><h1 class="hero-name">${esc(title(sp))}</h1></a>
     ${altNames(sp).length ? `<div class="hero-alt">${esc(altNames(sp).slice(0, 4).join("، "))}</div>` : ""}
-    <div class="hero-sci"><bdi dir="ltr"><span class="sci">${esc(sp.sci)}</span></bdi>${sp.en ? ` <span class="sub">–</span> <bdi dir="ltr">${esc(sp.en)}</bdi>` : ""}</div>
+    <div class="hero-sci"><bdi dir="ltr"><span class="sci">${esc(sp.sci)}</span></bdi></div>
+    ${sp.en ? `<div class="hero-alt"><bdi dir="ltr">${esc(sp.en)}</bdi></div>` : ""}
     ${famHint(r.ranked, sp)}
     <div class="actions"><button class="btn ok" id="yes">هذه هي ✓</button><a class="btn" href="#/s/${sp.id}?r=1">التفاصيل</a></div>
+    <div class="lens"><span>طول السمكة تقريباً</span>${[[0, "لا أعرف"], [20, "20–50 سم"], [50, "50–100 سم"], [100, "أكثر من متر"]].map(([v, t]) => `<button class="lenb${r.minLen === v ? " on" : ""}" data-len="${v}">${t}</button>`).join("")}</div>
     ${lv !== "hi" ? `<div class="note">${lv === "mid" ? "قارن صورتك بصورة الأطلس، وراجع الاحتمالات الأخرى في الأسفل قبل أن تعتمد الاسم." : "الصورة لا تطابق نوعاً واحداً بوضوح. جرّب صورة جانبية للسمكة كاملة، أو اضبط الإطار حول السمكة."}</div>` : ""}
     <h2 class="mark">احتمالات أخرى</h2>
     <ul class="list cands">${others.map((o) => { const s = S.species[o.s]; const w = Math.max(4, Math.round((o.score - r.ranked[7].score) / Math.max(1e-6, top.score - r.ranked[7].score) * 100)); return spRow(s, `<span class="meter"><i><b style="width:${w}%"></b></i></span>`).replace(`href="#/s/${s.id}"`, `href="#/s/${s.id}?r=1"`); }).join("")}</ul>
     <div class="actions"><button class="btn" id="recrop">ضبط الإطار</button><button class="btn" id="again">صورة أخرى</button></div>
     <p class="src">ليست في القائمة؟ <a href="#/browse">ابحث بالاسم أو تصفّح الأنواع</a>.</p>`;
   $("#yes").onclick = () => saveCatch(sp, r);
+  $$(".lenb").forEach((b) => (b.onclick = () => { r.minLen = Number(b.dataset.len); r.ranked = ordered(r.best, r.minLen); renderResult(); }));
   $("#again").onclick = () => $("#camInput").click();
   $("#recrop").onclick = () => cropUI();
 }
@@ -522,16 +590,18 @@ function cropUI() {
   const W = r.base.width, H = r.base.height;
   const b0 = r.box || { x: W * 0.05, y: H * 0.05, w: W * 0.9, h: H * 0.9 };
   view.innerHTML = `<h2 class="mark" style="margin-top:0">حرّك الزوايا حول السمكة</h2>
-    <div class="cropwrap" id="cw"><img src="${r.full}" alt=""><div class="cropbox" id="cb"><i data-h="nw"></i><i data-h="ne"></i><i data-h="sw"></i><i data-h="se"></i></div></div>
+    <div class="cropwrap"><div class="cropstage" id="cw"><img src="${r.full}" alt=""><div class="cropbox" id="cb"><i data-h="nw"></i><i data-h="ne"></i><i data-h="sw"></i><i data-h="se"></i></div></div></div>
     <div class="actions"><button class="btn pri" id="go">أعد التعرّف</button><button class="btn" id="cancel">إلغاء</button></div>`;
-  const cw = $("#cw"), cb = $("#cb");
+  const cw = $("#cw"), cb = $("#cb"), img = $("img", cw);
   let b = { ...b0 };
-  const place = () => { const k = cw.clientWidth / W; Object.assign(cb.style, { left: b.x * k + "px", top: b.y * k + "px", width: b.w * k + "px", height: b.h * k + "px" }); };
-  const img = $("img", cw); img.onload = place; place();
+  const scale = () => (img.clientWidth || 1) / W;
+  const place = () => { const k = scale(); Object.assign(cb.style, { left: b.x * k + "px", top: b.y * k + "px", width: b.w * k + "px", height: b.h * k + "px" }); };
+  if (img.complete) place(); else img.onload = place;
+  addEventListener("resize", place, { once: true });
   let drag = null;
   cw.addEventListener("pointerdown", (e) => {
-    const h = e.target.dataset && e.target.dataset.h; const k = cw.clientWidth / W;
-    drag = { h: h || (e.target === cb ? "move" : null), x: e.clientX, y: e.clientY, b: { ...b }, k };
+    const h = e.target.dataset && e.target.dataset.h;
+    drag = { h: h || (e.target === cb ? "move" : null), x: e.clientX, y: e.clientY, b: { ...b }, k: scale() };
     if (!drag.h) drag = null; else cw.setPointerCapture(e.pointerId);
   });
   cw.addEventListener("pointermove", (e) => {
