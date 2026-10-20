@@ -1,5 +1,5 @@
 // صيدتي — offline fish identification for the Arabian Sea coast of Oman
-const VER = "202610210050";
+const VER = "202610210051";
 const ASSET_CACHE = "samak-assets-v1";
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
@@ -679,7 +679,12 @@ async function main() {
     $("#" + id).addEventListener("change", (e) => { const f = e.target.files && e.target.files[0]; e.target.value = ""; if (f) startIdentify(f); });
   }
   addEventListener("online", netBadge); addEventListener("offline", netBadge); netBadge();
-  if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+  if ("serviceWorker" in navigator) {
+    // when an update installs, switch to it straight away (unless a photo is being analysed)
+    const had = !!navigator.serviceWorker.controller;
+    navigator.serviceWorker.addEventListener("controllerchange", () => { if (had && !S.busy) location.reload(); });
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+  }
   view.innerHTML = `<div class="analyzing"><div class="spin"></div></div>`;
   try { await loadData(); }
   catch (e) { view.innerHTML = `<div class="empty"><p>تعذّر تحميل البيانات.</p><p class="sub">افتح التطبيق مرة واحدة وأنت متصل بالإنترنت.</p></div>`; return; }
